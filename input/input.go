@@ -3,6 +3,7 @@ package input
 import (
 	"bufio"
 	"database/sql"
+	"fmt"
 	"os"
 	"simp_task_cli/database"
 	"strings"
@@ -30,14 +31,25 @@ func procces(db *sql.DB, data []string) {
 	opr := data[0]
 	switch opr {
 	case "add":
-		addTask(db, data[1], data[2])
+		err := addTask(db, data[1], data[2])
+		if err != nil {
+			panic(err)
+		}
+
+	case "delete":
+		deleteTask(db, data[1])
 	case "update":
-
+		updateTaskDescription(db, data[1], data[2])
 	case "mark-in-progress":
-
+		updateTaskStatus(db, data[1], "pending")
 	case "mark-done":
-
+		updateTaskStatus(db, data[1], "completed")
 	case "list":
+		ListOfTasks, err := getAllTasks(db)
+		if err != nil {
+			panic(err)
+		}
+		listprint(ListOfTasks)
 	}
 }
 
@@ -65,4 +77,35 @@ func getAllTasks(db *sql.DB) ([]Task, error) {
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+func updateTaskStatus(db *sql.DB, id, status string) error {
+	query := fmt.Sprintf("UPDATE tasks SET status = %s WHERE id = %s", status, id)
+	_, err := db.Exec(query, status, id)
+	return err
+}
+
+func deleteTask(db *sql.DB, id string) error {
+	query := "DELETE FROM tasks WHERE id = ?"
+	_, err := db.Exec(query, id)
+	return err
+}
+
+func updateTaskDescription(db *sql.DB, id, description string) error {
+	query := "UPDATE tasks SET description = ? WHERE id = ?"
+	_, err := db.Exec(query, description, id)
+	return err
+}
+func listprint(tasks []Task) {
+	for _, task := range tasks {
+		output := fmt.Sprintf(`
+		id : %d
+		status : %s
+		creater at : %s
+		title : %s
+		description :%s
+		`, task.ID, task.Status, task.CreatedAt, task.Title, task.Description)
+		fmt.Println(output)
+
+	}
 }
